@@ -45,25 +45,25 @@
             <div class="row g-4 mb-4">
                 <div class="col-md-6">
                     <div class="form-floating">
-                        <input maxlength="7" required type="text" class="form-control" name="callsign" id="callsign" placeholder="Enter callsign" value="{{ $callsign ?? old('callsign') }}" onblur="this.value = this.value.toUpperCase()">
+                        <input maxlength="7" required type="text" class="form-control" name="callsign" id="callsign" placeholder="Enter callsign" value="{{ old('callsign', $callsign) }}" onblur="this.value = this.value.toUpperCase()">
                         <label for="callsign" class="uk-form-label">Callsign</label>
                     </div>
-                    @if (!$callsign)
+                    @if ($callsign)
                         <div class="form-text">Your callsign was automatically collected. You may change the callsign if it is incorrect.</div>
                     @endif
                 </div>
                 <div class="col-md-6">
                     <div class="form-floating">
-                        <input required type="text" class="form-control" name="destination" id="destination" placeholder="Enter destination ICAO (e.g. EGLL)" maxlength="4" value="{{ $arrival_icao ?? old('destination') }}" onblur="this.value = this.value.toUpperCase()">
+                        <input required type="text" class="form-control" name="destination" id="destination" placeholder="Enter destination ICAO (e.g. EGLL)" maxlength="4" value="{{ old('destination', $arrival_icao) }}" onblur="this.value = this.value.toUpperCase()">
                         <label for="destination">Destination ICAO</label>
                     </div>
-                    @if (!$arrival_icao)
+                    @if ($arrival_icao)
                         <div class="form-text">Your destination was automatically collected. You may change the destination if it is incorrect.</div>
                     @endif
                 </div>
                 <div class="col-md-6">
                     <div class="form-floating">
-                        <input required type="text" class="form-control" name="flight_level" id="flight_level" placeholder="e.g. 310" maxlength="3" value="{{ $flight_level ?? old('flight_level') }}">
+                        <input required type="text" class="form-control" name="flight_level" id="flight_level" placeholder="e.g. 310" maxlength="3" value="{{ old('flight_level', $flight_level) }}">
                         <label for="flight_level">Requested {{ $isConcorde ? 'lower block' : 'oceanic' }} flight level (digits only, e.g. 340)</label>
                     </div>
 {{--                    @if (config('app.ctp_info_enabled'))--}}
@@ -104,9 +104,9 @@
                 <div class="col-auto">
                     <div class="form-floating">
                         <select class="form-select" id="track_id" name="track_id">
-                            <option value="" selected>None</option>
+                            <option value="" @selected(! old('track_id'))>None</option>
                             @foreach($tracks as $track)
-                                <option data-routeing="{{ $track->last_routeing }}" value="{{ $track->id }}">{{ $track->identifier }} ({{ $track->last_routeing }})</option>
+                                <option data-routeing="{{ $track->last_routeing }}" value="{{ $track->id }}" @selected(old('track_id') == $track->id)>{{ $track->identifier }} ({{ $track->last_routeing }})</option>
                             @endforeach
                         </select>
                         <label for="track_id">Requested NAT Track</label>
@@ -129,9 +129,9 @@
                 <div class="col-md-6">
                     <div class="form-floating">
                         <select class="form-select" id="target_datalink_authority_id" name="target_datalink_authority_id">
-                            <option value="" selected>Select one...</option>
+                            <option value="" @selected(! old('target_datalink_authority_id'))>Select one...</option>
                             @foreach($datalinkAuthorities as $key => $value)
-                                <option data-authority="{{ $key }}" value="{{ $key }}">{{ $key }} ({{ $value }})</option>
+                                <option data-authority="{{ $key }}" value="{{ $key }}" @selected(old('target_datalink_authority_id') == $key)>{{ $key }} ({{ $value }})</option>
                             @endforeach
                         </select>
                         <label for="track_id">First oceanic sector</label>
@@ -139,10 +139,10 @@
                 </div>
                 <div class="col-md-6">
                     <div class="form-floating">
-                        <input value="{{ old('entry_fix') }}" required type="text" class="form-control" name="entry_fix" id="entry_fix" placeholder="e.g. MALOT" maxlength="7" onblur="this.value = this.value.toUpperCase()">
+                        <input value="{{ old('entry_fix') }}" required type="text" class="form-control" name="entry_fix" id="entry_fix" placeholder="e.g. MALOT" maxlength="5" onblur="this.value = this.value.toUpperCase()">
                         <label for="entry_fix" class="uk-form-label">Entry fix</label>
                     </div>
-                    <div class="form-text">The first fix/waypoint in oceanic airspace.</div>
+                    <div class="form-text">The first fix/waypoint in oceanic airspace (maximum 5 characters).</div>
                     <div class="uk-text-meta uk-text-bold" style="display: none;" id="oep-autofilled-msg">This fix was auto-filled, based on your selected track..</div>
                 </div>
                 <div class="col-md-6">
@@ -253,6 +253,11 @@
             $("#entry_fix").prop('readonly', true).addClass('form-control-plaintext').removeClass('form-control').val(routeing.replace(/ .*/,''));
             $("#oep-autofilled-msg").show();
         });
+
+        // Restore the auto-filled entry fix when the form is re-shown with a track selected
+        if ($("#track_id").val()) {
+            $("#track_id").trigger('change');
+        }
     </script>
     <script>
         const tour = new Shepherd.Tour({

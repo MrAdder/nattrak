@@ -104,7 +104,7 @@
                     <div class="row mb-5">
                         <div class="col-sm">
                             <div class="form-floating">
-                                <input wire:model.blur="entryFix" value="{{ old('entry_fix') }}" required type="text" class="form-control" name="entry_fix" id="entry_fix" placeholder="e.g. MALOT" maxlength="7" onblur="this.value = this.value.toUpperCase()">
+                                <input wire:model.blur="entryFix" value="{{ old('entry_fix') }}" required type="text" class="form-control" name="entry_fix" id="entry_fix" placeholder="e.g. MALOT" maxlength="5" onblur="this.value = this.value.toUpperCase()">
                                 <label for="entry_fix" class="uk-form-label">Entry fix</label>
                             </div>
                         </div>
