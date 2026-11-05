@@ -148,7 +148,7 @@
                 <div class="col-md-6">
                     <div class="form-floating">
                         <input value="{{ old('entry_time') }}" required type="number" class="form-control" name="entry_time" id="entry_time" placeholder="e.g. 1350">
-                        <label for="entry_time" class="uk-form-label">Estimated time of arrival for entry fix</label>
+                        <label for="entry_time" class="uk-form-label">Estimated time of arrival at <span id="entry_time_fix">{{ strtoupper(old('entry_fix')) ?: 'oceanic entry fix' }}</span></label>
                     </div>
                     <div class="form-text">You can find this in your FMC, providing your simulator is set to real time.</div>
                     <a class="form-text" target="_blank" href="https://knowledgebase.ganderoceanic.ca/nattrak/requesting-oceanic-clearance/#section-3-oceanic-entry">An example is available here.</a>
@@ -238,12 +238,21 @@
         </div>
     </div>
     <script type="module">
+        // Name the entry fix in the ETA label so pilots don't give their destination ETA
+        function updateEntryTimeLabel() {
+            const fix = ($("#entry_fix").val() || '').trim().toUpperCase();
+            $("#entry_time_fix").text(fix || 'oceanic entry fix');
+        }
+
+        $("#entry_fix").on('input change', updateEntryTimeLabel);
+
         $("#track_id").change(function () {
             if ($("#is_concorde").val() == 1) return;
 
             if (this.value == '') {
                 $("#entry_fix").prop('readonly', false).removeClass('form-control-plaintext').addClass('form-control').val('');
                 $("#oep-autofilled-msg").hide();
+                updateEntryTimeLabel();
                 return;
             }
             const routeing = $(this).find(':selected').data("routeing");
@@ -252,6 +261,7 @@
             }
             $("#entry_fix").prop('readonly', true).addClass('form-control-plaintext').removeClass('form-control').val(routeing.replace(/ .*/,''));
             $("#oep-autofilled-msg").show();
+            updateEntryTimeLabel();
         });
     </script>
     <script>
