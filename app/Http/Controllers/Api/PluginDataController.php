@@ -151,7 +151,8 @@ class PluginDataController extends Controller
             'fix' => $msg->latestClxMessage ? $msg->latestClxMessage->entry_fix : $msg->entry_fix,
             'level' => $msg->latestClxMessage ? $msg->latestClxMessage->flight_level : $msg->flight_level,
             'mach' => '0.'.substr($msg->mach, 1),
-            'estimating_time' => $msg->latestClxMessage ? self::formatTime($msg->latestClxMessage->cto_time) : self::formatTime($msg->entry_time),
+            // Auto-acknowledged CLXs have no CTO, so fall back to the pilot's estimate
+            'estimating_time' => self::formatTime($msg->latestClxMessage?->cto_time ?? $msg->entry_time),
             'clearance_issued' => $msg->latestClxMessage?->created_at,
             'extra_info' => $msg->free_text,
         ];
@@ -174,6 +175,10 @@ class PluginDataController extends Controller
 
     private static function formatTime($time)
     {
+        if (blank($time)) {
+            return null;
+        }
+
         return substr($time, 0, 2).':'.substr($time, 2, 2);
     }
 }
