@@ -14,6 +14,9 @@ use Illuminate\Validation\Rule;
 
 class RclMessageRequest extends FormRequest
 {
+    /** A valid 24-hour time in HHMM format (0000-2359). */
+    private const HHMM_REGEX = '/^([01]\d|2[0-3])[0-5]\d$/';
+
     public CpdlcService $cpdlcService;
 
     public function __construct(CpdlcService $cpdlcService)
@@ -31,7 +34,7 @@ class RclMessageRequest extends FormRequest
             'upper_flight_level' => 'required_if:is_concorde,true|numeric|digits:3|min:055',
             'mach' => 'required|numeric|digits:3',
             'entry_fix' => 'required|max:5',
-            'entry_time' => 'required|numeric|digits:4',
+            'entry_time' => ['required', 'numeric', 'digits:4', 'regex:'.self::HHMM_REGEX],
             'tmi' => 'required|numeric|min:001|max:366',
             'random_routeing' => 'nullable|regex:/^[A-Z\/0-9 _]*[A-Z\/0-9][A-Z\/0-9 _]*$/',
             'is_concorde' => 'nullable',
@@ -44,8 +47,14 @@ class RclMessageRequest extends FormRequest
         'flight_level.max' => 'You must file a valid flight level.',
         'max_flight_level.max' => 'You must file a valid maximum flight level.',
         'callsign.alpha_num' => 'Your callsign must be valid with no spaces as you would enter it into your pilot client. E.g. BAW14LA, AAL134',
-        'target_datalink_authority_id.required' => 'You must select the first oceanic sector you will be flying through.'
+        'target_datalink_authority_id.required' => 'You must select the first oceanic sector you will be flying through.',
+        'entry_time.regex' => 'Your oceanic entry time must be a valid 24-hour time in HHMM format (e.g. 1350).',
     ];
+
+    public function messages(): array
+    {
+        return $this->messages;
+    }
 
     public function prepareForValidation()
     {
@@ -114,7 +123,8 @@ class RclMessageRequest extends FormRequest
                     $validator->errors()->add('mach.regex', 'Mach must be in format 0xx (e.g. .74 = 074)');
                 }
                 /** Entry fix time requirement */
-                if (config('app.rcl_time_constraints_enabled') && strlen($this->entry_time) == 4) {
+                // The after() hook runs even when the base rules fail, so only parse a valid HHMM time
+                if (config('app.rcl_time_constraints_enabled') && preg_match(self::HHMM_REGEX, (string) $this->entry_time)) {
                     if (!$this->entryTimeWithinRange($this->entry_time)) {
                         if (config('app.rcl_auto_acknowledgement_enabled') && DatalinkAuthority::find($this->target_datalink_authority_id)?->auto_acknowledge_participant) {
                             $this->cpdlcService->sendMessage(author: DatalinkAuthority::find('SYST'), recipient: $this->callsign, recipientAccount: Auth::user(), message: sprintf(RclResponsesEnum::Contact->value, strtoupper(DatalinkAuthorities::OCEN->description())), caption: RclResponsesEnum::Contact->text());
