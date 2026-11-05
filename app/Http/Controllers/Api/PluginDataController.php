@@ -145,6 +145,7 @@ class PluginDataController extends Controller
     private static function serializeRclMessage(RclMessage $msg): array
     {
         return [
+            'id' => $msg->id,
             'callsign' => $msg->callsign,
             'status' => $msg->clxMessages->count() ? 'CLEARED' : 'PENDING',
             'nat' => self::isOnTrackOrRr($msg),
