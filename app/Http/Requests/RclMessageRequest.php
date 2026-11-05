@@ -109,6 +109,16 @@ class RclMessageRequest extends FormRequest
                 if ($this->flight_level > 450) {
                     $validator->errors()->add('flight_level.max', 'You must file a valid flight level.');
                 }
+                /** Requested FL must be available on the requested track */
+                if ($this->track_id != null && $this->random_routeing == null && ($track = Track::find($this->track_id))) {
+                    $trackLevels = $this->trackFlightLevels($track);
+                    if ($trackLevels && ! in_array((int) $this->flight_level, $trackLevels, true)) {
+                        $validator->errors()->add(
+                            'flight_level.track',
+                            "NAT Track {$track->identifier} is only available at FL".implode(', ', $trackLevels).". Please request one of those levels, or request a random routeing if you require FL{$this->flight_level}."
+                        );
+                    }
+                }
                 /** Mach regex */
                 if (preg_match("/\b[0][1-9][0-9]\b/", $this->mach) == 0) {
                     $validator->errors()->add('mach.regex', 'Mach must be in format 0xx (e.g. .74 = 074)');
@@ -185,12 +195,34 @@ class RclMessageRequest extends FormRequest
             ->get();
 
         foreach ($tracks as $track) {
-            if ($this->normaliseRouteing($track->last_routeing) === $requestedRouteing) {
-                return $track;
+            if ($this->normaliseRouteing($track->last_routeing) !== $requestedRouteing) {
+                continue;
             }
+
+            // A RR along a track's routeing is valid when the requested FL isn't available on that track
+            $trackLevels = $this->trackFlightLevels($track);
+            if ($trackLevels && ! $this->boolean('is_concorde') && ! in_array((int) $this->flight_level, $trackLevels, true)) {
+                continue;
+            }
+
+            return $track;
         }
 
         return null;
+    }
+
+    /**
+     * The track's published flight levels in hundreds of feet (e.g. 350), or an
+     * empty array when the levels are unknown.
+     *
+     * @return int[]
+     */
+    private function trackFlightLevels(Track $track): array
+    {
+        return array_values(array_filter(
+            array_map(fn ($level) => intdiv((int) $level, 100), $track->flight_levels ?? []),
+            fn (int $level) => $level > 0
+        ));
     }
 
     private function normaliseRouteing(?string $routeing): ?string
